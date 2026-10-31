@@ -1,6 +1,6 @@
 import React from "react";
 
-import { SVG_NS } from "@excalidraw/common";
+import { DEFAULT_EXPORT_PADDING, SVG_NS } from "@excalidraw/common";
 
 import type { FileId, FractionalIndex } from "@excalidraw/element/types";
 
@@ -15,6 +15,7 @@ import {
   decodeSvgBase64Payload,
   encodeSvgBase64Payload,
   exportScene,
+  getExportSize,
 } from "../scene/export";
 
 import { API } from "./helpers/api";
@@ -111,6 +112,35 @@ describe("export", () => {
 
     expect(await exportedWidthAt(2)).toBe((await exportedWidthAt(1)) * 2);
     copySpy.mockRestore();
+  });
+
+  it("computes the export size at the export scale", async () => {
+    const sizeAt = (scale: number) =>
+      getExportSize({
+        data: {
+          elements: [
+            API.createElement({
+              type: "rectangle",
+              x: 0,
+              y: 0,
+              width: 100,
+              height: 50,
+            }),
+          ],
+          appState: getDefaultAppState(),
+          files: {},
+        },
+        config: { scale },
+      });
+
+    expect(await sizeAt(1)).toEqual({
+      width: 100 + DEFAULT_EXPORT_PADDING * 2,
+      height: 50 + DEFAULT_EXPORT_PADDING * 2,
+    });
+    expect(await sizeAt(2)).toEqual({
+      width: (100 + DEFAULT_EXPORT_PADDING * 2) * 2,
+      height: (50 + DEFAULT_EXPORT_PADDING * 2) * 2,
+    });
   });
 
   it("export svg-embedded scene", async () => {

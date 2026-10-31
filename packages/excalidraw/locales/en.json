@@ -538,6 +538,7 @@
       "darkMode": "Dark mode",
       "embedScene": "Embed scene",
       "scale": "Scale",
+      "size": "Size",
       "padding": "Padding"
     },
     "tooltip": {

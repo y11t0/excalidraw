@@ -93,6 +93,9 @@ const clampPadding = (padding: number, targets: readonly number[]) =>
   );
 const DEFAULT_ZOOM_VALUE = 1 as NormalizedZoomValue;
 
+/** A canvas takes whole pixels, and at least one of them. */
+const toPixelSize = (size: number) => Math.max(1, Math.round(size));
+
 const truncateText = (
   element: NonDeleted<ExcalidrawTextElement>,
   maxWidth: number,
@@ -874,8 +877,8 @@ const exportToCanvas = async ({
 
   // round rather than letting the canvas truncate, which would turn float
   // noise (e.g. 28.999999999999996) into a pixel lost
-  canvas.width = Math.max(1, Math.round(exportWidth));
-  canvas.height = Math.max(1, Math.round(exportHeight));
+  canvas.width = toPixelSize(exportWidth);
+  canvas.height = toPixelSize(exportHeight);
 
   const { imageCache } = await updateImageCache({
     imageCache: new Map(),
@@ -1376,6 +1379,33 @@ export function exportScene(
       return exportToSvg(opts);
   }
 }
+
+// ---------------------------------------------------------------------------
+// getExportSize
+// ---------------------------------------------------------------------------
+
+/**
+ * The size in pixels of the image an export with this data and config
+ * produces (padding and `scale` included), without rendering it.
+ */
+export const getExportSize = async ({
+  data,
+  config,
+}: {
+  data: ExportSceneData;
+  config?: ExportSceneConfig;
+}) => {
+  const { exportWidth, exportHeight } = await configExportDimension({
+    data,
+    config,
+    renderEnvironment: getExportRenderEnvironment(config?.environment),
+  });
+
+  return {
+    width: toPixelSize(exportWidth),
+    height: toPixelSize(exportHeight),
+  };
+};
 
 // ---------------------------------------------------------------------------
 // exportToClipboard

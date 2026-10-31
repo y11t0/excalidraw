@@ -25,7 +25,11 @@ import { useCopyStatus } from "../hooks/useCopiedIndicator";
 
 import { t } from "../i18n";
 import { isSomeElementSelected } from "../scene";
-import { exportScene, getExportConfigFromAppState } from "../scene/export";
+import {
+  exportScene,
+  getExportConfigFromAppState,
+  getExportSize,
+} from "../scene/export";
 
 import { copyIcon, downloadIcon, helpIcon } from "./icons";
 import { Dialog } from "./Dialog";
@@ -89,6 +93,10 @@ const ImageExportModal = ({
   const previewRef = useRef<HTMLDivElement>(null);
   const previewRenderRequestIdRef = useRef(0);
   const [renderError, setRenderError] = useState<Error | null>(null);
+  const [exportSize, setExportSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
 
   const { onCopy, copyStatus, resetCopyStatus } = useCopyStatus();
 
@@ -192,6 +200,59 @@ const ImageExportModal = ({
     exportWithDarkMode,
     exportScale,
     embedScene,
+  ]);
+
+  useEffect(() => {
+    let isStale = false;
+
+    getExportSize({
+      data: {
+        elements: exportedElements,
+        appState: appStateSnapshot,
+        files,
+      },
+      config: {
+        ...getExportConfigFromAppState({
+          ...appStateSnapshot,
+          exportBackground: exportWithBackground,
+          exportWithDarkMode,
+          exportScale,
+        }),
+        padding: DEFAULT_EXPORT_PADDING,
+        exportingFrame,
+      },
+    })
+      .then(({ width, height }) => {
+        if (isStale) {
+          return;
+        }
+        // keep the previous object when nothing changed, so that re-running
+        // this effect doesn't re-render the dialog
+        setExportSize((prev) =>
+          prev?.width === width && prev.height === height
+            ? prev
+            : { width, height },
+        );
+      })
+      .catch((error) => {
+        if (isStale) {
+          return;
+        }
+        console.error(error);
+        setExportSize(null);
+      });
+
+    return () => {
+      isStale = true;
+    };
+  }, [
+    appStateSnapshot,
+    files,
+    exportedElements,
+    exportingFrame,
+    exportWithBackground,
+    exportWithDarkMode,
+    exportScale,
   ]);
 
   return (
@@ -303,6 +364,15 @@ const ImageExportModal = ({
               label: `${scale}\u00d7`,
             }))}
           />
+        </ExportSetting>
+        <ExportSetting
+          label={t("imageExportDialog.label.size")}
+          name="exportSize"
+        >
+          <span>
+            {exportSize &&
+              `${exportSize.width} × ${exportSize.height} px`}
+          </span>
         </ExportSetting>
 
         <div className="ImageExportModal__settings__buttons">
